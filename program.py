@@ -10,9 +10,15 @@ def parse_flow_log(file_path):
 
 def parse_lookup_table(file_path):
     # Parse the lookup table file
+    lookup_table = {}
     with open(file_path, 'r') as f:
         reader = csv.reader(f)
-        lookup_table = {f"{row[0]},{row[1]}": row[2] for row in reader}
+        for row in reader:
+            if len(row) >= 3:  # Check if the row has at least 3 columns
+                lookup_table[f"{row[0]},{row[1]}"] = row[2]
+            # Handle cases with fewer columns if needed, e.g., print a warning
+            else:
+                print(f"Skipping row with insufficient columns: {row}") # Print a warning for rows with less than 3 columns
 
     return lookup_table
 
@@ -20,14 +26,17 @@ def map_flow_log_to_tags(flow_log_data, lookup_table):
     # Map each row in the flow log data to a tag based on the lookup table
     tagged_data = []
     for row in flow_log_data:
-        dst_port = row[5]
-        protocol = row[6]
-        key = f"{dst_port},{protocol}"
-        if key in lookup_table:
-            tag = lookup_table[key]
+        if len(row) >= 7: # Check if the row has enough elements
+            dst_port = row[5]
+            protocol = row[6]
+            key = f"{dst_port},{protocol}"
+            if key in lookup_table:
+                tag = lookup_table[key]
+            else:
+                tag = "Untagged"
+            tagged_data.append((row, tag))
         else:
-            tag = "Untagged"
-        tagged_data.append((row, tag))
+            print(f"Skipping row with insufficient columns: {row}") # Print a warning for rows with less than 7 columns
 
     return tagged_data
 
