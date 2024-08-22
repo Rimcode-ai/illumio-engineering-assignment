@@ -15,7 +15,10 @@ def parse_lookup_table(file_path):
         reader = csv.reader(f)
         for row in reader:
             if len(row) >= 3:  # Check if the row has at least 3 columns
-                lookup_table[f"{row[0]},{row[1]}"] = row[2]
+                key = f"{row[0]},{row[1]}".lower()  # Convert to lowercase for case-insensitive matching
+                if key not in lookup_table:
+                    lookup_table[key] = []
+                lookup_table[key].append(row[2])
             # Handle cases with fewer columns if needed, e.g., print a warning
             else:
                 print(f"Skipping row with insufficient columns: {row}") # Print a warning for rows with less than 3 columns
@@ -29,12 +32,13 @@ def map_flow_log_to_tags(flow_log_data, lookup_table):
         if len(row) >= 7: # Check if the row has enough elements
             dst_port = row[5]
             protocol = row[6]
-            key = f"{dst_port},{protocol}"
+            key = f"{dst_port},{protocol}".lower()  # Convert to lowercase for case-insensitive matching
             if key in lookup_table:
-                tag = lookup_table[key]
+                tags = lookup_table[key]
             else:
-                tag = "Untagged"
-            tagged_data.append((row, tag))
+                tags = ["Untagged"]
+            for tag in tags:
+                tagged_data.append((row, tag))
         else:
             print(f"Skipping row with insufficient columns: {row}") # Print a warning for rows with less than 7 columns
 
@@ -42,7 +46,7 @@ def map_flow_log_to_tags(flow_log_data, lookup_table):
 
 def generate_output(tagged_data):
     # Generate the output file
-    tag_counts = {}
+    tag_counts = {} # Initialize tag_counts and port_protocol_counts
     port_protocol_counts = {}
     for row, tag in tagged_data:
         if tag not in tag_counts:
@@ -52,9 +56,11 @@ def generate_output(tagged_data):
 
     with open("output.txt", 'w') as f:
         f.write("Tag Counts:\n")
+        f.write("Tag,Count\n") # Add header for tag counts
         for tag, count in tag_counts.items():
             f.write(f"{tag},{count}\n")
         f.write("\nPort/Protocol Combination Counts:\n")
+        f.write("Port,Protocol,Count\n") # Add header for port/protocol counts
         for key, count in port_protocol_counts.items():
             f.write(f"{key},{count}\n")
 
